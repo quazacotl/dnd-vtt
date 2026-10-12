@@ -1,6 +1,7 @@
 import {config} from '@/shared/config'
 
 import {commandSchema} from './command'
+import {findPath, findApproachPath} from './movement'
 import type {DiceSource, ExecutionResult, GameCommand, GameEvent, GameState} from './types'
 
 /** Проверяет команду и рассчитывает новый снимок без изменения исходного состояния. */
@@ -51,6 +52,7 @@ export function executeCommand(
             index: 0,
             order: results.map((r) => r.id),
             actionAvailable: true,
+            movementRemaining: nextState.combatants[results[0].id].speed,
         }
         emit({type: 'initiative', results})
         emit({type: 'turn', actorId: results[0].id, round: 1})
@@ -68,7 +70,26 @@ export function executeCommand(
             )
             nextState.combat.index = index
             nextState.combat.actionAvailable = true
+            nextState.combat.movementRemaining =
+                nextState.combatants[state.combat.order[index]].speed
             emit({type: 'turn', actorId: state.combat.order[index], round: nextState.combat.round})
+        } else if (command.type === 'move') {
+            if (
+                !Object.hasOwn(state.combatants, command.actorId) ||
+                state.combatants[command.actorId].hp <= 0 ||
+                command.actorId !== activeId
+            )
+                return reject('turn', 'Перемещаться может только действующий участник.')
+            const path = findPath(state, command.actorId, command.destination)
+            if (!path || path.length < 2)
+                return reject('path', 'Клетка недоступна для перемещения.')
+            const costFeet = (path.length - 1) * config.cellFeet
+            if (costFeet > state.combat.movementRemaining)
+                return reject('movement', 'Недостаточно движения в этом ходу.')
+            const token = nextState.scene.tokens.find((t) => t.combatantId === command.actorId)!
+            Object.assign(token, path.at(-1))
+            nextState.combat.movementRemaining -= costFeet
+            emit({type: 'movement', actorId: command.actorId, path, costFeet})
         } else {
             const actor = nextState.combatants[command.actorId]
             const target = nextState.combatants[command.targetId]
@@ -79,7 +100,21 @@ export function executeCommand(
                 return reject('resource', 'Действие в этом ходу уже использовано.')
             const weapon = actor.weapons.find((w) => w.id === command.weaponId)
             if (!weapon) return reject('weapon', 'Оружие не найдено.')
-            const from = state.scene.tokens.find((t) => t.combatantId === actor.id)
+            if (command.type === 'approachAttack') {
+                const path = findApproachPath(state, actor.id, target.id, weapon.range)
+                if (!path)
+                    return reject('path', 'Невозможно подойти и атаковать за оставшееся движение.')
+                if (path.length > 1) {
+                    const costFeet = (path.length - 1) * config.cellFeet
+                    Object.assign(
+                        nextState.scene.tokens.find((t) => t.combatantId === actor.id)!,
+                        path.at(-1),
+                    )
+                    nextState.combat.movementRemaining -= costFeet
+                    emit({type: 'movement', actorId: actor.id, path, costFeet})
+                }
+            }
+            const from = nextState.scene.tokens.find((t) => t.combatantId === actor.id)
             const to = state.scene.tokens.find((t) => t.combatantId === target.id)
             if (
                 !from ||

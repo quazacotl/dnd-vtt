@@ -58,31 +58,34 @@ export function ChatPanel({
                     </div>
                 )}
                 {snapshot &&
-                    events.map((event) => (
+                    events.map((event, index) => (
                         <div
                             key={event.id}
                             className={`event-message ${event.type === 'attackRoll' ? 'attack-message' : ''}`}
                         >
-                            {event.type === 'attackRoll' && texts[event.commandId] && (
-                                <div className="user-message">
-                                    <span className="message-label">ИГРОК</span>
-                                    <p>{texts[event.commandId]}</p>
-                                </div>
-                            )}
+                            {(event.type === 'attackRoll' || event.type === 'movement') &&
+                                events[index - 1]?.commandId !== event.commandId &&
+                                texts[event.commandId] && (
+                                    <div className="user-message">
+                                        <span className="message-label">ИГРОК</span>
+                                        <p>{texts[event.commandId]}</p>
+                                    </div>
+                                )}
                             <div className="message-label">
                                 <Check size={12} /> ДВИЖОК <span>#{event.sequence + 1}</span>
                             </div>
                             <p>{describeEvent(event, snapshot.state)}</p>
-                            {event.type === 'attackRoll' && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={disabled}
-                                    onClick={() => void controller.replay(event.commandId)}
-                                >
-                                    <RotateCcw size={12} /> Повторить анимацию
-                                </Button>
-                            )}
+                            {(event.type === 'attackRoll' || event.type === 'movement') &&
+                                events[index - 1]?.commandId !== event.commandId && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={disabled}
+                                        onClick={() => void controller.replay(event.commandId)}
+                                    >
+                                        <RotateCcw size={12} /> Повторить анимацию
+                                    </Button>
+                                )}
                         </div>
                     ))}
                 {notice && <p className="chat-hint">{notice}</p>}
@@ -112,7 +115,7 @@ export function ChatPanel({
                     disabled={disabled}
                 />
                 <div>
-                    <small>Одна атака за сообщение</small>
+                    <small>Атака · «Иду на 3,5» · подход и атака</small>
                     <Button type="submit" disabled={disabled} aria-label="Отправить действие">
                         <Send size={15} />
                     </Button>

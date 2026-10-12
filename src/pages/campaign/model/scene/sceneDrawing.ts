@@ -1,6 +1,7 @@
 import {Container, Graphics, Text} from 'pixi.js'
 
-import type {GameState} from '../engine/types'
+import {reachableCells} from '../engine/movement'
+import type {Cell, GameState} from '../engine/types'
 
 /** Отрисовывает снимок игры; оформление не изменяет состояние. */
 export function drawScene(
@@ -10,6 +11,8 @@ export function drawScene(
     selected: string,
     onSelect: (id: string) => void,
     flash?: {target: string; progress: number; amount: string},
+    onMove?: (cell: Cell) => void,
+    interactive = true,
 ) {
     for (const child of world.removeChildren()) child.destroy({children: true})
     const cell = 58
@@ -32,33 +35,45 @@ export function drawScene(
                 floor.circle(x * cell + 15, y * cell + 18, 4).fill({color: 0x678056, alpha: 0.22})
         }
     world.addChild(floor)
-    const ruins = new Graphics()
-    for (const [x, y, w, h] of [
-        [1, 1, 3, 0.4],
-        [1, 1, 0.4, 2],
-        [8, 1, 3, 0.4],
-        [10.6, 1, 0.4, 2],
-        [1, 8.6, 3, 0.4],
-        [8, 8.6, 3, 0.4],
-    ]) {
-        ruins
-            .roundRect(x * cell, y * cell, w * cell, h * cell, 4)
-            .fill('#70766a')
-            .stroke({color: 0x9a9a81, width: 1})
+    if (interactive) {
+        floor.eventMode = 'static'
+        floor.cursor = 'crosshair'
+        floor.on('pointertap', (event) => {
+            const p = event.getLocalPosition(world)
+            onMove?.({x: Math.floor(p.x / cell), y: Math.floor(p.y / cell)})
+        })
+        const range = new Graphics()
+        for (const c of reachableCells(state, selected))
+            range
+                .rect(c.x * cell + 2, c.y * cell + 2, cell - 4, cell - 4)
+                .fill({color: 0x9acb98, alpha: 0.13})
+                .stroke({color: 0x83b17b, alpha: 0.3, width: 1})
+        world.addChild(range)
     }
-    for (const [x, y] of [
-        [2, 3],
-        [9, 3],
-        [2, 7],
-        [9, 7],
-    ]) {
-        ruins.circle(x * cell + 29, y * cell + 29, 19).fill('#252b24')
+    const ruins = new Graphics()
+    for (const {x, y} of state.scene.obstacles) {
         ruins
-            .circle(x * cell + 27, y * cell + 25, 16)
-            .fill('#6d7463')
+            .roundRect(x * cell + 5, y * cell + 5, cell - 10, cell - 10, 6)
+            .fill('#69735f')
             .stroke({color: 0x97977b, width: 2})
+        ruins
+            .moveTo(x * cell + 12, y * cell + 27)
+            .lineTo(x * cell + 45, y * cell + 27)
+            .stroke({color: 0x414d3d, width: 2})
     }
     world.addChild(ruins)
+    for (let x = 0; x < state.scene.width; x++) {
+        const label = new Text({text: String(x), style: {fontSize: 11, fill: '#9baf8e'}})
+        label.anchor.set(0.5)
+        label.position.set(x * cell + 29, -18)
+        world.addChild(label)
+    }
+    for (let y = 0; y < state.scene.height; y++) {
+        const label = new Text({text: String(y), style: {fontSize: 11, fill: '#9baf8e'}})
+        label.anchor.set(0.5)
+        label.position.set(-18, y * cell + 29)
+        world.addChild(label)
+    }
     const active = state.combat.active ? state.combat.order[state.combat.index] : null
     for (const token of state.scene.tokens) {
         const c = state.combatants[token.combatantId]

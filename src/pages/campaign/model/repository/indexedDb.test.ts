@@ -13,6 +13,7 @@ function action(): CommittedAction {
         order: ['hero', 'goblin'],
         index: 0,
         actionAvailable: true,
+        movementRemaining: 30,
     }
     const command = {
         type: 'attack' as const,
@@ -29,6 +30,44 @@ function action(): CommittedAction {
     return {command, beforeState: state, result, text: 'Атакую гоблина мечом'}
 }
 describe('IndexedDB', () => {
+    it('старое сохранение получает скорость и карту без потери HP и ревизии', async () => {
+        const name = crypto.randomUUID()
+        const repo = createRepository(name)
+        const s = createStarterState()
+        await repo.create(s)
+        const legacy = {
+            version: 1,
+            state: {
+                ...s,
+                revision: 7,
+                scene: {...s.scene, obstacles: undefined},
+                combat: {...s.combat, movementRemaining: undefined},
+                combatants: Object.fromEntries(
+                    Object.entries(s.combatants).map(([id, c]) => [
+                        id,
+                        {...c, hp: id === 'goblin' ? 7 : c.hp, speed: undefined},
+                    ]),
+                ),
+            },
+            events: [],
+        }
+        const db = await new Promise<IDBDatabase>((resolve) => {
+            const req = indexedDB.open(name)
+            req.onsuccess = () => resolve(req.result)
+        })
+        await new Promise<void>((resolve) => {
+            const tx = db.transaction('campaigns', 'readwrite')
+            tx.objectStore('campaigns').put(legacy)
+            tx.oncomplete = () => resolve()
+        })
+        const snapshot = await repo.load('demo')
+        expect(snapshot?.state.combatants.goblin.hp).toBe(7)
+        expect(snapshot?.state.revision).toBe(7)
+        expect(snapshot?.state.combatants.hero.speed).toBe(30)
+        expect(snapshot?.state.combat.movementRemaining).toBe(30)
+        expect(snapshot?.state.scene.obstacles).toContainEqual({x: 2, y: 3})
+        db.close()
+    })
     it.each([99, 1])('повреждённое сохранение версии %s не удаляется', async (version) => {
         const name = crypto.randomUUID()
         const repo = createRepository(name)

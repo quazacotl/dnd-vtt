@@ -1,6 +1,7 @@
 import {z} from 'zod'
 
 import {commandSchema} from '../engine/command'
+import {createStarterObstacles} from '../engine/starter'
 
 const weapon = z.object({
     id: z.string(),
@@ -19,6 +20,7 @@ const combatant = z.object({
     tempHp: z.number().nonnegative(),
     ac: z.number(),
     dex: z.number(),
+    speed: z.number().nonnegative().default(30),
     weapons: z.array(weapon),
 })
 export const stateSchema = z
@@ -26,19 +28,32 @@ export const stateSchema = z
         id: z.string(),
         revision: z.number().int().nonnegative(),
         ruleset: z.literal('2014'),
-        scene: z.object({
-            name: z.string(),
-            width: z.number().int().positive(),
-            height: z.number().int().positive(),
-            tokens: z.array(
-                z.object({
-                    id: z.string(),
-                    combatantId: z.string(),
-                    x: z.number().int().nonnegative(),
-                    y: z.number().int().nonnegative(),
-                }),
-            ),
-        }),
+        scene: z
+            .object({
+                name: z.string(),
+                width: z.number().int().positive(),
+                height: z.number().int().positive(),
+                obstacles: z
+                    .array(
+                        z.object({
+                            x: z.number().int().nonnegative(),
+                            y: z.number().int().nonnegative(),
+                        }),
+                    )
+                    .optional(),
+                tokens: z.array(
+                    z.object({
+                        id: z.string(),
+                        combatantId: z.string(),
+                        x: z.number().int().nonnegative(),
+                        y: z.number().int().nonnegative(),
+                    }),
+                ),
+            })
+            .transform((scene) => ({
+                ...scene,
+                obstacles: scene.obstacles ?? createStarterObstacles(scene.width, scene.height),
+            })),
         combatants: z.record(z.string(), combatant),
         combat: z.object({
             active: z.boolean(),
@@ -46,6 +61,7 @@ export const stateSchema = z
             order: z.array(z.string()),
             index: z.number().int().nonnegative(),
             actionAvailable: z.boolean(),
+            movementRemaining: z.number().nonnegative().default(30),
         }),
     })
     .superRefine((s, ctx) => {
@@ -55,6 +71,7 @@ export const stateSchema = z
                     !s.combatants[t.combatantId] || t.x >= s.scene.width || t.y >= s.scene.height,
             ) ||
             s.combat.order.some((id) => !s.combatants[id]) ||
+            s.scene.obstacles.some((c) => c.x >= s.scene.width || c.y >= s.scene.height) ||
             (s.combat.active && s.combat.index >= s.combat.order.length)
         if (invalid) ctx.addIssue({code: 'custom', message: 'Нарушены связи сохранения'})
     })
@@ -89,6 +106,12 @@ export const eventSchema = z
             afterTempHp: z.number(),
         }),
         z.object({type: z.literal('combatEnded')}),
+        z.object({
+            type: z.literal('movement'),
+            actorId: z.string(),
+            path: z.array(z.object({x: z.number(), y: z.number()})).min(2),
+            costFeet: z.number().positive(),
+        }),
     ])
     .and(
         z.object({

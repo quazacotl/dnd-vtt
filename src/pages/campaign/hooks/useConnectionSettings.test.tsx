@@ -20,6 +20,7 @@ it('новый controller после HMR использует действующ
         order: ['hero', 'goblin'],
         index: 0,
         actionAvailable: true,
+        movementRemaining: 30,
     }
     await repository.create(state)
     const fetched: string[] = []

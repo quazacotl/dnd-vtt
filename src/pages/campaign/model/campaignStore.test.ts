@@ -15,6 +15,7 @@ async function controller(parser: IntentParser = localParser) {
         order: ['hero', 'goblin'],
         index: 0,
         actionAvailable: true,
+        movementRemaining: 30,
     }
     await repository.create(state)
     const values = [15, 4]

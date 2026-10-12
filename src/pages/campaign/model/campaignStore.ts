@@ -3,7 +3,7 @@ import {createStore} from 'zustand/vanilla'
 import {buildContext} from '../utils/utils'
 import {executeCommand} from './engine/execute'
 import {createStarterState} from './engine/starter'
-import type {DiceSource, GameCommand} from './engine/types'
+import type {Cell, DiceSource, GameCommand} from './engine/types'
 import type {IntentParser, ParseResult} from './parser/types'
 import type {CampaignRepository, CampaignSnapshot, CommittedAction} from './repository/types'
 
@@ -146,6 +146,14 @@ export function createCampaignController(deps: {
             store.setState({busy: true, error: null, clarification: null})
             await execute({...base(), type: 'end'}, 'Завершить ход')
         },
+        async moveTo(destination: Cell, actorId: string) {
+            if (blocked() || !store.getState().snapshot) return
+            store.setState({busy: true, error: null, clarification: null})
+            await execute(
+                {...base(), type: 'move', actorId, destination},
+                `Перемещаюсь на ${destination.x},${destination.y}`,
+            )
+        },
         async submitMessage(text: string) {
             if (blocked() || !text.trim()) return
             const snapshot = store.getState().snapshot
@@ -175,10 +183,22 @@ export function createCampaignController(deps: {
                     store.setState({clarification: result, clarificationText: text, busy: false})
                     return
                 }
+                if (result.kind === 'move') {
+                    await execute(
+                        {
+                            ...base(),
+                            type: 'move',
+                            actorId: result.actorId,
+                            destination: result.destination,
+                        },
+                        text,
+                    )
+                    return
+                }
                 await execute(
                     {
                         ...base(),
-                        type: 'attack',
+                        type: result.approach ? 'approachAttack' : 'attack',
                         actorId: result.actorId,
                         targetId: result.targetId,
                         weaponId: result.weaponId,
@@ -200,7 +220,13 @@ export function createCampaignController(deps: {
             if (!c || !c.options.some((o) => o.id === targetId)) return
             store.setState({clarification: null, busy: true, error: null})
             await execute(
-                {...base(), type: 'attack', actorId: c.actorId, targetId, weaponId: c.weaponId},
+                {
+                    ...base(),
+                    type: c.approach ? 'approachAttack' : 'attack',
+                    actorId: c.actorId,
+                    targetId,
+                    weaponId: c.weaponId,
+                },
                 s.clarificationText,
             )
         },

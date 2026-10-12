@@ -33,7 +33,7 @@ export function SceneView({
             )}
             <div className="scene-caption">
                 <span>Руины Серебряного дозора</span>
-                <span>1 клетка = 5 футов · выбор токена кликом</span>
+                <span>1 клетка = 5 футов · клик по клетке: движение выбранного</span>
             </div>
         </section>
     )

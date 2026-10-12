@@ -96,7 +96,7 @@ export function ParticipantsPanel({
                         </span>
                     </div>
                     <p className="muted">
-                        Демонстрационные параметры. Редактор появится в следующем срезе.
+                        Скорость: {character.speed} футов. Редактор появится в следующем срезе.
                     </p>
                 </div>
             )}

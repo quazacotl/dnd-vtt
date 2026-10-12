@@ -15,6 +15,7 @@ export interface Combatant {
     tempHp: number
     ac: number
     dex: number
+    speed: number
     weapons: Weapon[]
 }
 export interface GameState {
@@ -25,6 +26,7 @@ export interface GameState {
         name: string
         width: number
         height: number
+        obstacles: Cell[]
         tokens: {id: string; combatantId: string; x: number; y: number}[]
     }
     combatants: Record<string, Combatant>
@@ -34,6 +36,7 @@ export interface GameState {
         order: string[]
         index: number
         actionAvailable: boolean
+        movementRemaining: number
     }
 }
 interface CommandBase {
@@ -45,7 +48,8 @@ export type GameCommand = CommandBase &
     (
         | {type: 'start'}
         | {type: 'end'}
-        | {type: 'attack'; actorId: string; targetId: string; weaponId: string}
+        | {type: 'attack' | 'approachAttack'; actorId: string; targetId: string; weaponId: string}
+        | {type: 'move'; actorId: string; destination: Cell}
     )
 export interface DiceSource {
     roll(sides: number): number
@@ -85,7 +89,12 @@ export type GameEvent = EventBase &
               afterTempHp: number
           }
         | {type: 'combatEnded'}
+        | {type: 'movement'; actorId: string; path: Cell[]; costFeet: number}
     )
 export type ExecutionResult =
     | {kind: 'accepted'; nextState: GameState; events: GameEvent[]}
     | {kind: 'rejected'; code: string; message: string}
+export interface Cell {
+    x: number
+    y: number
+}

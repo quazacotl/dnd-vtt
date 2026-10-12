@@ -40,5 +40,9 @@ export function describeEvent(event: GameEvent, state: GameState): string {
             return `Урон: ${event.amount} (${event.dice.join(' + ')} + ${event.bonus}). ${name(event.targetId)}: HP ${event.beforeHp} → ${event.afterHp}${event.beforeTempHp ? `, временные HP ${event.beforeTempHp} → ${event.afterTempHp}` : ''}.`
         case 'combatEnded':
             return 'Бой завершён.'
+        case 'movement': {
+            const end = event.path.at(-1)!
+            return `${name(event.actorId)}: перемещение на ${end.x},${end.y} · ${event.costFeet} футов.`
+        }
     }
 }

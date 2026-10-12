@@ -123,7 +123,7 @@ export function CampaignPage({controller}: {controller: CampaignController}) {
                         <div className="combat-controls">
                             <span className="combat-status">
                                 {state.combat.active
-                                    ? `Раунд ${state.combat.round} · ${state.combat.actionAvailable ? 'Действие доступно' : 'Действие использовано'}`
+                                    ? `Раунд ${state.combat.round} · ${state.combat.actionAvailable ? 'Действие доступно' : 'Действие использовано'} · движение ${state.combat.movementRemaining} фт`
                                     : 'Исследование'}
                             </span>
                             {state.combat.active ? (

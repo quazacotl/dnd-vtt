@@ -35,7 +35,12 @@ export function useScene(
         const start = async () => {
             const {PixiRenderer} = await import('../model/scene/pixiRenderer')
             if (disposed) return
-            scene = new PixiRenderer((id) => select.current(id))
+            scene = new PixiRenderer(
+                (id) => select.current(id),
+                (cell) => {
+                    void controller.moveTo(cell, selection.current)
+                },
+            )
             renderer.current = scene
             const activeScene = scene
             const activeQueue = createAnimationQueue(activeScene)
@@ -43,27 +48,49 @@ export function useScene(
             await activeScene.mount(target)
             if (disposed) return
             activeScene.select(selection.current)
+            let failed = false
+            const abandon = () => {
+                failed = true
+                renderer.current = null
+                setError('Сцена недоступна; игра сохранена, действия доступны в чате.')
+                try {
+                    activeScene.destroy()
+                } catch {
+                    /* Ошибка GPU не должна блокировать игровой сценарий. */
+                }
+            }
+            const sync = () => {
+                const current = controller.store.getState().snapshot
+                if (!current || failed) return
+                try {
+                    activeScene.sync(current.state)
+                } catch {
+                    abandon()
+                }
+            }
             let last: unknown = null
             const update = () => {
                 if (disposed) return
                 const s = controller.store.getState()
+                if (failed) {
+                    if (s.animation) controller.finishAnimation()
+                    return
+                }
                 if (s.animation && s.animation !== last) {
                     last = s.animation
                     void activeQueue
                         .enqueue(s.animation)
                         .catch(() => {
-                            if (!disposed)
-                                setError('Анимация не завершилась; показано сохранённое состояние.')
+                            if (!disposed) abandon()
                         })
                         .finally(() => {
                             if (disposed) return
-                            const current = controller.store.getState().snapshot
-                            if (current) activeScene.sync(current.state)
+                            sync()
                             controller.finishAnimation()
                         })
                 } else if (!s.animation && s.snapshot) {
                     last = null
-                    activeScene.sync(s.snapshot.state)
+                    sync()
                 }
             }
             unsubscribe = controller.store.subscribe(update)

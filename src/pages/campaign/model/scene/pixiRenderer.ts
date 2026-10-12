@@ -1,7 +1,8 @@
 import {Application, Container} from 'pixi.js'
 
-import type {GameState} from '../engine/types'
+import type {Cell, GameState} from '../engine/types'
 import type {CommittedAction} from '../repository/types'
+import {createFrameAnimation} from './frameAnimation'
 import {drawScene} from './sceneDrawing'
 
 export class PixiRenderer {
@@ -13,7 +14,11 @@ export class PixiRenderer {
     private observer: ResizeObserver | null = null
     private cancelFrame: (() => void) | null = null
     private selected = 'hero'
-    constructor(private onSelect: (id: string) => void) {}
+    private playing = false
+    constructor(
+        private onSelect: (id: string) => void,
+        private onMove: (cell: Cell) => void,
+    ) {}
     async mount(container: HTMLElement) {
         await this.app.init({
             resizeTo: container,
@@ -45,41 +50,66 @@ export class PixiRenderer {
         if (this.state) this.sync(this.state)
     }
     private draw(state: GameState, flash?: {target: string; progress: number; amount: string}) {
-        drawScene(this.world, this.app.screen, state, this.selected, this.onSelect, flash)
+        drawScene(
+            this.world,
+            this.app.screen,
+            state,
+            this.selected,
+            this.onSelect,
+            flash,
+            this.onMove,
+            !this.playing,
+        )
     }
-    private tween(target: string, amount: string): Promise<void> {
-        return new Promise((resolve) => {
-            const start = performance.now()
-            let frame = 0
-            const finish = () => {
-                cancelAnimationFrame(frame)
-                this.cancelFrame = null
-                resolve()
-            }
-            this.cancelFrame = finish
-            const tick = (now: number) => {
-                if (this.destroyed) {
-                    finish()
-                    return
-                }
-                const p = Math.min(1, (now - start) / 850)
-                if (this.state) this.draw(this.state, {target, amount, progress: p})
-                if (p >= 1) finish()
-                else frame = requestAnimationFrame(tick)
-            }
-            frame = requestAnimationFrame(tick)
+    private async tween(target: string, amount: string): Promise<void> {
+        const animation = createFrameAnimation(850, (p) => {
+            if (this.state) this.draw(this.state, {target, amount, progress: p})
         })
+        this.cancelFrame = animation.cancel
+        try {
+            await animation.finished
+        } finally {
+            this.cancelFrame = null
+        }
     }
     async play(action: CommittedAction) {
         if (this.destroyed) return
-        this.sync(action.beforeState)
-        for (const event of [...action.result.events].sort((a, b) => a.sequence - b.sequence)) {
-            if (this.destroyed) return
-            if (event.type === 'attackRoll' && !event.hit)
-                await this.tween(event.targetId, 'Промах')
-            if (event.type === 'damage') await this.tween(event.targetId, `−${event.amount}`)
+        this.playing = true
+        this.sync(structuredClone(action.beforeState))
+        try {
+            for (const event of [...action.result.events].sort((a, b) => a.sequence - b.sequence)) {
+                if (this.destroyed) return
+                if (event.type === 'movement') {
+                    await this.moveAlongPath(event.actorId, event.path)
+                    if (this.state) this.state.combat.movementRemaining -= event.costFeet
+                }
+                if (event.type === 'attackRoll' && !event.hit)
+                    await this.tween(event.targetId, 'Промах')
+                if (event.type === 'damage') await this.tween(event.targetId, `−${event.amount}`)
+            }
+        } finally {
+            this.playing = false
+            if (!this.destroyed) this.sync(action.result.nextState)
         }
-        this.sync(action.result.nextState)
+    }
+    private async moveAlongPath(actorId: string, path: Cell[]): Promise<void> {
+        const token = this.state?.scene.tokens.find((t) => t.combatantId === actorId)
+        if (!token) return
+        const animation = createFrameAnimation(Math.min(1800, (path.length - 1) * 180), (p) => {
+            const segment = p * (path.length - 1)
+            const index = Math.min(path.length - 2, Math.floor(segment))
+            const fraction = segment - index
+            token.x = path[index].x + (path[index + 1].x - path[index].x) * fraction
+            token.y = path[index].y + (path[index + 1].y - path[index].y) * fraction
+            if (this.state) this.draw(this.state)
+        })
+        this.cancelFrame = animation.cancel
+        try {
+            await animation.finished
+            Object.assign(token, path.at(-1))
+        } finally {
+            this.cancelFrame = null
+        }
     }
     destroy() {
         this.destroyed = true

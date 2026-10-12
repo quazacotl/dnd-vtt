@@ -3,11 +3,21 @@ import type {IntentParser} from './types'
 export const localParser: IntentParser = {
     async parse(text, context, signal) {
         signal.throwIfAborted()
-        const value = text.toLowerCase().trim().replace(/[.!]$/, '').trim()
+        let value = text.toLowerCase().trim().replace(/[.!]$/, '').trim()
+        const move = /^(?:иду|перемещаюсь|move)\s+(?:на\s+|to\s+)?(\d+)\s*,\s*(\d+)$/.exec(value)
+        if (move)
+            return {
+                kind: 'move',
+                actorId: context.actorId,
+                destination: {x: Number(move[1]), y: Number(move[2])},
+            }
+        const compound = /^подхожу\s+к\s+(.+?)\s+и\s+атакую(?:\s+(.+))?$/.exec(value)
+        const approach = !!compound
+        if (compound) value = `атакую ${compound[1]} ${compound[2] ?? ''}`.trim()
         const command = /^(?:атакую|атаковать|бью|ударяю|attack)(?:\s+(.*))?$/.exec(value)
         const unsupported = {
             kind: 'unsupported' as const,
-            reason: 'Поддерживается одна атака: «Атакую гоблина мечом». Укажите известную цель и оружие; дополнительные действия не выполняются.',
+            reason: 'Используйте «Атакую гоблина мечом», «Иду на 3,5» или «Подхожу к гоблину и атакую мечом». Другие действия не выполняются.',
         }
         if (!command) return unsupported
         let remainder = command[1] ?? ''
@@ -47,12 +57,14 @@ export const localParser: IntentParser = {
                 options: matches.length ? matches : context.targets,
                 actorId: context.actorId,
                 weaponId: weapon.id,
+                ...(approach ? {approach: true} : {}),
             }
         return {
             kind: 'intent',
             actorId: context.actorId,
             targetId: matches[0].id,
             weaponId: weapon.id,
+            ...(approach ? {approach: true} : {}),
         }
     },
 }
