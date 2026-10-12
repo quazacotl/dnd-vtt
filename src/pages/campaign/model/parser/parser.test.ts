@@ -13,6 +13,14 @@ const context: ParseContext = {
 }
 const signal = () => new AbortController().signal
 describe('Parser', () => {
+    it.each([
+        'Не атакую гоблина мечом',
+        'Атакую гоблина мечом и отхожу',
+        'Атакую гоблина мечом дважды',
+        'Атакую гоблина луком',
+    ])('не исполняет неподдерживаемое сообщение: %s', async (text) => {
+        expect((await localParser.parse(text, context, signal())).kind).toBe('unsupported')
+    })
     it('таймаут и отмена не возвращают команду', async () => {
         vi.useFakeTimers()
         const fetcher: typeof fetch = async (_, options) =>

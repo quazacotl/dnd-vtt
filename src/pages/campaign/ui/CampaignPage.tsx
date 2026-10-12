@@ -25,7 +25,8 @@ export function CampaignPage({controller}: {controller: CampaignController}) {
     const [settingsOpen, setSettingsOpen] = useState(false)
     const connection = useConnectionSettings(controller)
     const candidate = params.get('selected') ?? 'hero'
-    const selected = snapshot?.state.combatants[candidate] ? candidate : 'hero'
+    const selected =
+        snapshot && Object.hasOwn(snapshot.state.combatants, candidate) ? candidate : 'hero'
     const onSelect = useCallback((id: string) => setParams({selected: id}), [setParams])
     const state = snapshot?.state
     return (

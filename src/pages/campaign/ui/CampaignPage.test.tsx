@@ -5,11 +5,34 @@ import {MemoryRouter} from 'react-router'
 import {expect, it, vi} from 'vitest'
 
 import {createCampaignController} from '../model/campaignStore'
+import {createStarterState} from '../model/engine/starter'
 import {localParser} from '../model/parser/localParser'
 import {createRepository} from '../model/repository/indexedDb'
 import {CampaignPage} from './CampaignPage'
 
 vi.mock('../hooks/useScene', () => ({useScene: () => ({error: null})}))
+it.each(['constructor', '__proto__', 'unknown'])(
+    'неизвестный selected=%s безопасно выбирает героя',
+    async (selected) => {
+        const repository = createRepository(crypto.randomUUID())
+        await repository.create(createStarterState())
+        const controller = createCampaignController({
+            repository,
+            parser: localParser,
+            dice: {roll: () => 15},
+        })
+        render(
+            <MemoryRouter initialEntries={['/campaign/demo?selected=' + selected]}>
+                <CampaignPage controller={controller} />
+            </MemoryRouter>,
+        )
+        expect(await screen.findByRole('heading', {name: 'Лирам'})).toBeInTheDocument()
+        expect(screen.getByRole('button', {name: /ЛирамГерой/})).toHaveAttribute(
+            'aria-pressed',
+            'true',
+        )
+    },
+)
 it('empty → демо → бой → атака; показывает итог в чате', async () => {
     const controller = createCampaignController({
         repository: createRepository(crypto.randomUUID()),
