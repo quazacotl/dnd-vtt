@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {font-family: 'Segoe UI', sans-serif; color: #e8e6dd; background: #111611; --background: #111611; --foreground: #e8e6dd; --primary: #d3b273; --primary-foreground: #171b16; --secondary: #253027; --secondary-foreground: #eee9dc; --muted: #232a24; --muted-foreground: #a2aba1; --accent: #303a2e; --accent-foreground: #eee9dc; --border: #374034; --input: #374034; --ring: #d3b273; --destructive: #d57269; --radius: .5rem; --card: #1b231c; --card-foreground: #eee9dc; --popover: #1b231c; --popover-foreground: #eee9dc;}
+@theme inline {--color-background: var(--background); --color-foreground: var(--foreground); --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground); --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground); --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground); --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring); --color-destructive: var(--destructive);}
+* {box-sizing: border-box;}
+body {margin:0; min-width:360px;}
+button, input, textarea, select {font:inherit;}
+button {cursor:pointer;}
+button:disabled {cursor:not-allowed;}
