@@ -8,6 +8,7 @@ const base = {
 export const commandSchema = z.discriminatedUnion('type', [
     z.strictObject({...base, type: z.literal('start')}),
     z.strictObject({...base, type: z.literal('end')}),
+    z.strictObject({...base, type: z.literal('stop')}),
     z.strictObject({
         ...base,
         type: z.enum(['attack', 'approachAttack']),

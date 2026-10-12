@@ -1,13 +1,15 @@
 import {createStore} from 'zustand/vanilla'
 
 import {buildContext} from '../utils/utils'
+import {createManagementActions} from './campaignManagement'
 import {executeCommand} from './engine/execute'
 import {createStarterState} from './engine/starter'
 import type {Cell, DiceSource, GameCommand} from './engine/types'
 import type {IntentParser, ParseResult} from './parser/types'
 import type {CampaignRepository, CampaignSnapshot, CommittedAction} from './repository/types'
 
-interface CampaignView {
+export interface CampaignView {
+    loadEpoch: number
     snapshot: CampaignSnapshot | null
     status: 'loading' | 'empty' | 'ready' | 'partial' | 'error'
     busy: boolean
@@ -27,6 +29,7 @@ export function createCampaignController(deps: {
     dice: DiceSource
 }) {
     const store = createStore<CampaignView>(() => ({
+        loadEpoch: 0,
         snapshot: null,
         status: 'loading',
         busy: false,
@@ -49,8 +52,10 @@ export function createCampaignController(deps: {
             busy: false,
         })
     const persist = async (action: CommittedAction) => {
+        const epoch = store.getState().loadEpoch
         try {
             const snapshot = await deps.repository.commit(action)
+            if (epoch !== store.getState().loadEpoch) return
             store.setState({
                 snapshot,
                 status: 'ready',
@@ -62,6 +67,7 @@ export function createCampaignController(deps: {
                 texts: {...store.getState().texts, [action.command.id]: action.text},
             })
         } catch (error) {
+            if (epoch !== store.getState().loadEpoch) return
             store.setState({pendingSave: action})
             fail(error)
         }
@@ -98,7 +104,9 @@ export function createCampaignController(deps: {
         store,
         async load(id: string) {
             cancelRequest()
+            const ticket = store.getState().loadEpoch + 1
             store.setState({
+                loadEpoch: ticket,
                 status: 'loading',
                 snapshot: null,
                 error: null,
@@ -107,7 +115,6 @@ export function createCampaignController(deps: {
                 texts: {},
                 busy: false,
             })
-            const ticket = generation
             try {
                 const snapshot = await deps.repository.load(id)
                 const actions = snapshot
@@ -120,10 +127,10 @@ export function createCampaignController(deps: {
                 const texts = Object.fromEntries(
                     actions.filter((a) => a !== null).map((a) => [a.command.id, a.text]),
                 )
-                if (ticket === generation)
+                if (ticket === store.getState().loadEpoch)
                     store.setState({snapshot, texts, status: snapshot ? 'ready' : 'empty'})
             } catch (e) {
-                if (ticket === generation) fail(e)
+                if (ticket === store.getState().loadEpoch) fail(e)
             }
         },
         async createDemo() {
@@ -146,6 +153,11 @@ export function createCampaignController(deps: {
             store.setState({busy: true, error: null, clarification: null})
             await execute({...base(), type: 'end'}, 'Завершить ход')
         },
+        async stopCombat() {
+            if (blocked()) return
+            store.setState({busy: true, error: null})
+            await execute({...base(), type: 'stop'}, 'Завершить бой')
+        },
         async moveTo(destination: Cell, actorId: string) {
             if (blocked() || !store.getState().snapshot) return
             store.setState({busy: true, error: null, clarification: null})
@@ -158,6 +170,10 @@ export function createCampaignController(deps: {
             if (blocked() || !text.trim()) return
             const snapshot = store.getState().snapshot
             if (!snapshot) return
+            if (!snapshot.state.combat.active) {
+                store.setState({notice: 'Сначала начните бой, чтобы выполнять игровые действия.'})
+                return
+            }
             store.setState({
                 busy: true,
                 parsing: true,
@@ -255,6 +271,9 @@ export function createCampaignController(deps: {
             }
         },
     }
-    return controller
+    return {
+        ...controller,
+        ...createManagementActions(deps.repository, store, (id) => controller.load(id)),
+    }
 }
 export type CampaignController = ReturnType<typeof createCampaignController>

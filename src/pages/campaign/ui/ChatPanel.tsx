@@ -32,7 +32,7 @@ export function ChatPanel({
         await controller.submitMessage(text)
         reset()
     })
-    const events = snapshot?.events ?? []
+    const events = snapshot?.events.filter((e) => e.sceneId === snapshot.state.scene.id) ?? []
     return (
         <aside className="chat-panel">
             <div className="chat-heading">
@@ -46,15 +46,15 @@ export function ChatPanel({
                         РАССКАЗЧИК <span>НАЧАЛО СЦЕНЫ</span>
                     </div>
                     <p>
-                        Среди покрытых мхом руин слышится скрежет стали. Из тени выступает гоблин.
-                        Лирам перехватывает меч — противник уже рядом.
+                        {snapshot?.state.scene.name}. Участников:{' '}
+                        {Object.keys(snapshot?.state.combatants ?? {}).length}.
                     </p>
                     <small>Опишите действие. Правила и броски проверит движок.</small>
                 </div>
                 {!events.length && (
                     <div className="chat-hint">
-                        Начните бой и дождитесь хода Лирама. Затем попробуйте:{' '}
-                        <strong>«Атакую гоблина мечом»</strong>.
+                        Добавьте участников через редактор и начните бой. Для атаки укажите имя цели
+                        и оружие.
                     </div>
                 )}
                 {snapshot &&

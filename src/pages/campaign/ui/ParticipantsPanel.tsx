@@ -18,7 +18,7 @@ export function ParticipantsPanel({
     return (
         <aside className="participants">
             <div className="panel-label">
-                УЧАСТНИКИ <span>02</span>
+                УЧАСТНИКИ <span>{Object.keys(state.combatants).length}</span>
             </div>
             {Object.values(state.combatants).map((c) => (
                 <button
@@ -31,7 +31,11 @@ export function ParticipantsPanel({
                     <span className="participant-info">
                         <strong>{c.name}</strong>
                         <small>
-                            {c.side === 'party' ? 'Герой · Воин' : 'Противник · Гуманоид'}
+                            {c.details
+                                ? `${c.side === 'party' ? 'Герой' : 'Противник'} · ${c.details.className || c.details.species}`
+                                : c.side === 'party'
+                                  ? 'Герой · Воин'
+                                  : 'Противник · Гуманоид'}
                         </small>
                         <span className="hp-track">
                             <span style={{width: `${(c.hp / c.maxHp) * 100}%`}} />
@@ -89,15 +93,14 @@ export function ParticipantsPanel({
                         <span>
                             {character.weapons[0]?.name}
                             <small>
-                                +{character.weapons[0]?.bonus} к атаке · 1d
+                                +{character.weapons[0]?.bonus} к атаке ·{' '}
+                                {character.weapons[0]?.diceCount ?? 1}d
                                 {character.weapons[0]?.damageDie}+
                                 {character.weapons[0]?.damageBonus}
                             </small>
                         </span>
                     </div>
-                    <p className="muted">
-                        Скорость: {character.speed} футов. Редактор появится в следующем срезе.
-                    </p>
+                    <p className="muted">Скорость: {character.speed} футов.</p>
                 </div>
             )}
         </aside>

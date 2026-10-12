@@ -23,7 +23,7 @@ export function executeCommand(
     const events: GameEvent[] = []
     type Payload = GameEvent extends infer E
         ? E extends GameEvent
-            ? Omit<E, 'id' | 'sequence' | 'commandId' | 'messageId' | 'timestamp'>
+            ? Omit<E, 'id' | 'sequence' | 'commandId' | 'messageId' | 'timestamp' | 'sceneId'>
             : never
         : never
     const emit = (payload: Payload) =>
@@ -34,6 +34,7 @@ export function executeCommand(
             commandId: command.id,
             messageId: command.messageId,
             timestamp: new Date().toISOString(),
+            sceneId: state.scene.id,
         } as GameEvent)
     if (command.type === 'start') {
         if (state.combat.active) return reject('active', 'Бой уже начат.')
@@ -59,7 +60,10 @@ export function executeCommand(
     } else {
         if (!state.combat.active) return reject('inactive', 'Сначала начните бой.')
         const activeId = state.combat.order[state.combat.index]
-        if (command.type === 'end') {
+        if (command.type === 'stop') {
+            nextState.combat.active = false
+            emit({type: 'combatEnded'})
+        } else if (command.type === 'end') {
             let index = state.combat.index
             do {
                 index = (index + 1) % state.combat.order.length
@@ -140,8 +144,9 @@ export function executeCommand(
                 critical,
             })
             if (hit) {
-                const rolls = Array.from({length: critical ? 2 : 1}, () =>
-                    dice.roll(weapon.damageDie),
+                const rolls = Array.from(
+                    {length: (weapon.diceCount ?? 1) * (critical ? 2 : 1)},
+                    () => dice.roll(weapon.damageDie),
                 )
                 const amount = Math.max(
                     0,

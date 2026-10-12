@@ -33,6 +33,7 @@ export function createStarterState(): GameState {
         revision: 0,
         ruleset: '2014',
         scene: {
+            id: 'initial',
             name: 'Руины Серебряного дозора',
             width: 12,
             height: 10,

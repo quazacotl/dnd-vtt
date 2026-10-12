@@ -1,5 +1,11 @@
 {
     "plugins": ["typescript", "react", "vitest", "jsx-a11y"],
     "ignorePatterns": ["dist/**"],
-    "rules": {"typescript/no-explicit-any": "error"}
+    "rules": {
+        "typescript/no-explicit-any": "error",
+        "jsx-a11y/label-has-associated-control": [
+            "warn",
+            {"controlComponents": ["Input", "Textarea"]}
+        ]
+    }
 }

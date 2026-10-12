@@ -12,22 +12,34 @@ import {useConnectionSettings} from '../hooks/useConnectionSettings'
 import type {CampaignController} from '../model/campaignStore'
 import {ChatPanel} from './ChatPanel'
 import {ConnectionSettings} from './ConnectionSettings'
+import {ManagementPanel} from './ManagementPanel'
 import {ParticipantsPanel} from './ParticipantsPanel'
 import {SceneView} from './SceneView'
 
 export function CampaignPage({controller}: {controller: CampaignController}) {
     const {campaignId = 'demo'} = useParams()
     const navigate = useNavigate()
-    const {snapshot, status, busy} = useCampaign(controller, campaignId)
+    const [params, setParams] = useSearchParams()
+    const {snapshot, status, busy} = useCampaign(controller, campaignId, params.get('scene'))
     const error = useStore(controller.store, (s) => s.error)
     const pending = useStore(controller.store, (s) => s.pendingSave)
-    const [params, setParams] = useSearchParams()
+    const [managementOpen, setManagementOpen] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
     const connection = useConnectionSettings(controller)
     const candidate = params.get('selected') ?? 'hero'
     const selected =
-        snapshot && Object.hasOwn(snapshot.state.combatants, candidate) ? candidate : 'hero'
-    const onSelect = useCallback((id: string) => setParams({selected: id}), [setParams])
+        snapshot && Object.hasOwn(snapshot.state.combatants, candidate)
+            ? candidate
+            : (Object.keys(snapshot?.state.combatants ?? {})[0] ?? '')
+    const onSelect = useCallback(
+        (id: string) =>
+            setParams((p) => {
+                const next = new URLSearchParams(p)
+                next.set('selected', id)
+                return next
+            }),
+        [setParams],
+    )
     const state = snapshot?.state
     return (
         <div className="app-shell">
@@ -45,10 +57,22 @@ export function CampaignPage({controller}: {controller: CampaignController}) {
                         <ShieldCheck size={14} /> Локальное сохранение
                     </span>
                 </div>
+                <Button variant="secondary" onClick={() => setManagementOpen((v) => !v)}>
+                    <BookOpen size={15} /> Кампании и редакторы
+                </Button>
                 <Button variant="outline" onClick={() => setSettingsOpen((v) => !v)}>
                     <Settings size={15} /> Настройки
                 </Button>
             </header>
+            {managementOpen && (
+                <ManagementPanel
+                    controller={controller}
+                    snapshot={snapshot}
+                    selected={selected}
+                    disabled={busy}
+                    onClose={() => setManagementOpen(false)}
+                />
+            )}
             {settingsOpen && (
                 <ConnectionSettings
                     settings={connection.connection.settings}
@@ -117,7 +141,7 @@ export function CampaignPage({controller}: {controller: CampaignController}) {
                 <>
                     <div className="campaign-toolbar">
                         <div>
-                            <span className="eyebrow">КАМПАНИЯ / ГЛАВА I</span>
+                            <span className="eyebrow">{snapshot.name}</span>
                             <h1>{state.scene.name}</h1>
                         </div>
                         <div className="combat-controls">
@@ -127,13 +151,22 @@ export function CampaignPage({controller}: {controller: CampaignController}) {
                                     : 'Исследование'}
                             </span>
                             {state.combat.active ? (
-                                <Button
-                                    disabled={busy}
-                                    variant="secondary"
-                                    onClick={() => void controller.endTurn()}
-                                >
-                                    Завершить ход <ChevronRight size={16} />
-                                </Button>
+                                <>
+                                    <Button
+                                        disabled={busy}
+                                        variant="secondary"
+                                        onClick={() => void controller.endTurn()}
+                                    >
+                                        Завершить ход <ChevronRight size={16} />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        disabled={busy}
+                                        onClick={() => void controller.stopCombat()}
+                                    >
+                                        Завершить бой
+                                    </Button>
+                                </>
                             ) : (
                                 <Button
                                     disabled={busy}

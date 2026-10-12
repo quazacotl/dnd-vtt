@@ -45,14 +45,65 @@ export function createRepository(name = 'dnd-vtt-v1'): CampaignRepository {
         return result.data
     }
     return {
+        async list() {
+            const db = await open()
+            const rows = await new Promise<unknown[]>((resolve, reject) => {
+                const req = db.transaction('campaigns').objectStore('campaigns').getAll()
+                req.onsuccess = () => resolve(req.result)
+                req.onerror = () => reject(Error('Не удалось прочитать список кампаний.'))
+            })
+            return rows.map(parse).map((s) => ({id: s.state.id, name: s.name}))
+        },
+        async replace(input, expectedRevision) {
+            const next = parse(input)
+            if (next.state.revision !== expectedRevision + 1)
+                throw Error('Неверная ревизия изменения.')
+            const db = await open()
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction('campaigns', 'readwrite')
+                let error = 'Ошибка сохранения изменений.'
+                const req = tx.objectStore('campaigns').get(next.state.id)
+                req.onsuccess = () => {
+                    try {
+                        if (parse(req.result).state.revision !== expectedRevision) {
+                            error = 'Состояние изменилось в другой вкладке.'
+                            tx.abort()
+                            return
+                        }
+                        tx.objectStore('campaigns').put(next)
+                    } catch {
+                        tx.abort()
+                    }
+                }
+                tx.oncomplete = () => resolve(structuredClone(next))
+                tx.onabort = () => reject(Error(error))
+            })
+        },
+        async importCopy(input, actions) {
+            const snapshot = parse(input)
+            const records = actions.map((a) => actionSchema.parse(a))
+            const db = await open()
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(['campaigns', 'actions'], 'readwrite')
+                tx.objectStore('campaigns').add(snapshot)
+                for (const action of records) tx.objectStore('actions').add(action)
+                tx.oncomplete = () => resolve(structuredClone(snapshot))
+                tx.onabort = () => reject(Error('Импорт отменён: коллизия или ошибка хранилища.'))
+            })
+        },
         async load(id) {
             const value = await read('campaigns', id)
             return value === undefined ? null : parse(value)
         },
-        async create(state) {
+        async create(state, name) {
             const db = await open()
-            const snapshot: CampaignSnapshot = {version: 1, state, events: []}
-            parse(snapshot)
+            const snapshot: CampaignSnapshot = parse({
+                version: 1,
+                state,
+                events: [],
+                name: name ?? state.scene.name,
+                inactiveScenes: {},
+            })
             return new Promise((resolve, reject) => {
                 const tx = db.transaction('campaigns', 'readwrite')
                 tx.objectStore('campaigns').add(snapshot)
@@ -81,6 +132,7 @@ export function createRepository(name = 'dnd-vtt-v1'): CampaignRepository {
                             }
                             const offset = snapshot.events.length
                             snapshot = {
+                                ...snapshot,
                                 version: 1,
                                 state: action.result.nextState,
                                 events: [

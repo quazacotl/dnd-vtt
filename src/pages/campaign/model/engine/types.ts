@@ -5,6 +5,22 @@ export interface Weapon {
     damageDie: number
     damageBonus: number
     range: number
+    diceCount?: number
+}
+export type Ability = 'str' | 'dex' | 'con' | 'int' | 'wis' | 'cha'
+export interface CharacterDetails {
+    kind: 'character' | 'creature'
+    level: number
+    className: string
+    species: string
+    abilities: Record<Ability, number>
+    skills: Record<string, number>
+    saves: Record<string, number>
+    inventory: {name: string; count: number}[]
+    spells: {name: string; level: number; description: string}[]
+    features: string[]
+    conditions: string[]
+    notes: string
 }
 export interface Combatant {
     id: string
@@ -17,12 +33,14 @@ export interface Combatant {
     dex: number
     speed: number
     weapons: Weapon[]
+    details?: CharacterDetails
 }
 export interface GameState {
     id: string
     revision: number
     ruleset: '2014'
     scene: {
+        id: string
         name: string
         width: number
         height: number
@@ -48,6 +66,7 @@ export type GameCommand = CommandBase &
     (
         | {type: 'start'}
         | {type: 'end'}
+        | {type: 'stop'}
         | {type: 'attack' | 'approachAttack'; actorId: string; targetId: string; weaponId: string}
         | {type: 'move'; actorId: string; destination: Cell}
     )
@@ -55,6 +74,7 @@ export interface DiceSource {
     roll(sides: number): number
 }
 interface EventBase {
+    sceneId: string
     id: string
     sequence: number
     commandId: string

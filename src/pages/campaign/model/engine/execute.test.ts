@@ -36,6 +36,31 @@ const attack: GameCommand = {
 }
 
 describe('executeCommand', () => {
+    it.each([false, true])('атака 2d8: крит=%s удваивает число костей', (critical) => {
+        const state = ready()
+        state.combatants.hero.weapons[0].diceCount = 2
+        const result = executeCommand(
+            state,
+            attack,
+            critical ? dice(20, 2, 3, 4, 5) : dice(15, 2, 3),
+        )
+        if (result.kind !== 'accepted') throw Error('Отказ')
+        const damage = result.events.find((e) => e.type === 'damage')
+        expect(damage?.dice).toEqual(critical ? [2, 3, 4, 5] : [2, 3])
+        expect(damage?.amount).toBe(critical ? 17 : 8)
+    })
+    it('ручное завершение боя открывает редактор без изменения HP', () => {
+        const state = ready()
+        const result = executeCommand(
+            state,
+            {type: 'stop', id: 'stop', messageId: 'stop', expectedRevision: 0},
+            dice(),
+        )
+        if (result.kind !== 'accepted') throw Error('Отказ')
+        expect(result.nextState.combat.active).toBe(false)
+        expect(result.nextState.combatants).toEqual(state.combatants)
+        expect(result.events[0].type).toBe('combatEnded')
+    })
     it('не принимает неизвестный тип и лишние поля команды', () => {
         for (const raw of [
             {...attack, type: 'damage'},

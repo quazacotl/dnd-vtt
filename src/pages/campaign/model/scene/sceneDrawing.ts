@@ -94,7 +94,7 @@ export function drawScene(
         body.alpha = c.hp > 0 ? 1 : 0.35
         unit.addChild(body)
         const letter = new Text({
-            text: c.side === 'party' ? 'Л' : 'Г',
+            text: c.name.slice(0, 1).toUpperCase(),
             style: {fontFamily: 'Georgia', fontSize: 25, fill: '#f3eee1', fontWeight: 'bold'},
         })
         letter.anchor.set(0.5)

@@ -12,8 +12,9 @@ export function resolveLlmEndpoint(baseUrl: string, devMode = import.meta.env.DE
 
 /** Строит минимальный контекст parser для действующего участника. */
 export function buildContext(state: GameState): ParseContext {
-    const id = state.combat.order[state.combat.index] ?? 'hero'
+    const id = state.combat.order[state.combat.index] ?? Object.keys(state.combatants)[0] ?? ''
     const actor = state.combatants[id]
+    if (!actor) return {actorId: '', actors: [], targets: [], weapons: []}
     return {
         actorId: id,
         actors: [{id, name: actor.name}],
@@ -45,4 +46,33 @@ export function describeEvent(event: GameEvent, state: GameState): string {
             return `${name(event.actorId)}: перемещение на ${end.x},${end.y} · ${event.costFeet} футов.`
         }
     }
+}
+
+/** Форматирует именованные числовые значения для редактора. */
+export const formatNamedNumbers = (data: Record<string, number>) =>
+    Object.entries(data)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n')
+/** Читает отдельные строки, сохраняя повторяющиеся названия предметов. */
+export function parseNamedEntries(text: string): readonly (readonly [string, number])[] {
+    const entries = text
+        .split('\n')
+        .filter((l) => l.trim())
+        .map((line) => {
+            const pos = line.lastIndexOf(':')
+            const key = line.slice(0, pos).trim()
+            const value = Number(line.slice(pos + 1).trim())
+            if (pos < 1 || !Number.isFinite(value))
+                throw Error('Используйте формат «название: число», по одной записи на строку.')
+            return [key, value] as const
+        })
+    return entries
+}
+
+/** Читает карту бонусов и отклоняет повторяющиеся названия. */
+export function parseNamedNumbers(text: string): Record<string, number> {
+    const entries = parseNamedEntries(text)
+    if (new Set(entries.map(([name]) => name)).size !== entries.length)
+        throw Error('Названия навыков и спасбросков не должны повторяться.')
+    return Object.fromEntries(entries)
 }

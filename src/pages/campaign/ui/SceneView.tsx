@@ -1,5 +1,6 @@
 import {Expand, Layers} from 'lucide-react'
 import {useRef} from 'react'
+import {useStore} from 'zustand'
 
 import {useScene} from '../hooks/useScene'
 import type {CampaignController} from '../model/campaignStore'
@@ -14,6 +15,7 @@ export function SceneView({
     onSelect: (id: string) => void
 }) {
     const container = useRef<HTMLDivElement>(null)
+    const name = useStore(controller.store, (s) => s.snapshot?.state.scene.name ?? 'Сцена')
     const {error} = useScene(container, controller, selected, onSelect)
     return (
         <section className="battlefield" aria-label="Тактическая карта">
@@ -32,7 +34,7 @@ export function SceneView({
                 </p>
             )}
             <div className="scene-caption">
-                <span>Руины Серебряного дозора</span>
+                <span>{name}</span>
                 <span>1 клетка = 5 футов · клик по клетке: движение выбранного</span>
             </div>
         </section>

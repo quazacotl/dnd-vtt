@@ -778,3 +778,189 @@ button:disabled {
     border-radius: 6px;
     background: #303c2b;
 }
+
+.management-panel {
+    padding: 24px 30px;
+    background: #20291e;
+    border-bottom: 1px solid #556044;
+    max-height: 76vh;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #5d6b4c transparent;
+}
+.management-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+.management-panel h2 {
+    font:
+        26px Georgia,
+        serif;
+    margin: 0;
+}
+.management-panel h3 {
+    font:
+        22px Georgia,
+        serif;
+    margin: 24px 0 16px;
+}
+.management-panel h4 {
+    font:
+        16px Georgia,
+        serif;
+    color: #d7c59d;
+    margin: 24px 0 12px;
+}
+.management-panel p {
+    font-size: 12px;
+    line-height: 1.7;
+    color: #b8c6a6;
+}
+.management-panel p[role='alert'] {
+    color: #f0b491;
+}
+.management-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+}
+.catalog-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 18px 0;
+}
+.catalog-list > div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    border: 1px solid #46543b;
+    border-radius: 7px;
+    padding: 12px 16px;
+    background: #182219;
+}
+.catalog-list span {
+    font-size: 11px;
+    color: #a8b597;
+}
+.world-create {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: end;
+    border-top: 1px solid #46513b;
+    padding-top: 20px;
+}
+.management-panel label {
+    display: grid;
+    gap: 7px;
+    color: #c8c8af;
+    font-size: 11px;
+}
+.management-panel input,
+.management-panel textarea,
+.management-panel select {
+    background: #121b14;
+    border: 1px solid #4b593d;
+    border-radius: 5px;
+    color: #eee8d4;
+    padding: 8px;
+    font-size: 12px;
+}
+.management-panel textarea {
+    min-height: 84px;
+    resize: vertical;
+}
+.management-panel .settings-actions {
+    margin-top: 18px;
+    gap: 9px;
+    display: flex;
+    flex-wrap: wrap;
+}
+.editor-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+}
+.editor-text-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 24px;
+}
+.weapon-editor {
+    display: grid;
+    grid-template-columns: 2fr repeat(5, 1fr) auto;
+    gap: 10px;
+    align-items: end;
+    margin-bottom: 12px;
+}
+.spell-editor {
+    display: grid;
+    grid-template-columns: 1.5fr 0.5fr 3fr auto;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+.json-transfer > label {
+    margin: 16px 0;
+    max-width: 100%;
+}
+.json-transfer textarea {
+    font:
+        12px/1.5 Consolas,
+        monospace;
+    min-height: 230px;
+}
+.json-transfer select {
+    max-width: 350px;
+}
+@media (max-width: 850px) {
+    .world-create {
+        grid-template-columns: 1fr 1fr;
+    }
+    .editor-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .editor-text-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .weapon-editor,
+    .spell-editor {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .header-meta {
+        display: none;
+    }
+    .management-panel {
+        padding: 20px 16px;
+    }
+}
+@media (max-width: 550px) {
+    .editor-text-grid {
+        grid-template-columns: 1fr;
+    }
+    .management-tabs button {
+        padding: 8px;
+        flex: 1;
+    }
+    .management-panel h2 {
+        font-size: 21px;
+    }
+    .management-heading {
+        align-items: start;
+    }
+    .combat-controls {
+        flex-wrap: wrap;
+    }
+    .combat-status {
+        max-width: 100%;
+    }
+    .catalog-list > div {
+        width: 100%;
+    }
+}
