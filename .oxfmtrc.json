@@ -1,12 +1,12 @@
 {
-  "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["docs/**"],
-  "printWidth": 100,
-  "sortTailwindcss": true,
-  "sortImports": true,
-  "bracketSpacing": false,
-  "singleQuote": true,
-  "semi": false,
-  "tabWidth": 4,
-  "trailingComma": "all"
+    "$schema": "./node_modules/oxfmt/configuration_schema.json",
+    "ignorePatterns": ["docs/**"],
+    "printWidth": 100,
+    "sortTailwindcss": true,
+    "sortImports": true,
+    "bracketSpacing": false,
+    "singleQuote": true,
+    "semi": false,
+    "tabWidth": 4,
+    "trailingComma": "all"
 }
