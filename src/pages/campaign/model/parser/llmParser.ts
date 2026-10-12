@@ -2,6 +2,7 @@ import {z} from 'zod'
 
 import {config} from '@/shared/config'
 
+import {resolveLlmEndpoint} from '../../utils/utils'
 import {settingsSchema} from './connectionSettings'
 import {validateResult} from './responseValidation'
 import type {ConnectionSettings, IntentParser} from './types'
@@ -23,7 +24,7 @@ export function createLlmParser(
             const timeout = timeoutController.signal
             const combined = AbortSignal.any([signal, timeout])
             try {
-                const endpoint = valid.baseUrl.replace(/\/+$/, '') + '/chat/completions'
+                const endpoint = resolveLlmEndpoint(valid.baseUrl)
                 let response: Response
                 try {
                     response = await fetcher(endpoint, {
@@ -52,7 +53,9 @@ export function createLlmParser(
                     if (signal.aborted) throw Error('Запрос отменён.')
                     if (timeout.aborted) throw Error('Модель не ответила за 30 секунд.')
                     throw Error(
-                        'Сетевая ошибка. Проверьте адрес сервиса и разрешение CORS для браузера.',
+                        import.meta.env.DEV
+                            ? 'Сетевая ошибка. Проверьте, что Vite запущен и сервис модели доступен.'
+                            : 'Сетевая ошибка. Проверьте адрес сервиса и разрешение CORS для браузера.',
                     )
                 }
                 if (response.status === 401 || response.status === 403)

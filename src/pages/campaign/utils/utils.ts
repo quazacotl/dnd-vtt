@@ -1,5 +1,14 @@
+import {config} from '@/shared/config'
+
 import type {GameEvent, GameState} from '../model/engine/types'
 import type {ParseContext} from '../model/parser/types'
+
+/** В dev направляет запросы настроенного Qwen через Vite; остальные адреса остаются прямыми. */
+export function resolveLlmEndpoint(baseUrl: string, devMode = import.meta.env.DEV): string {
+    const base = baseUrl.replace(/\/+$/, '')
+    const configured = config.apiBaseUrl.replace(/\/+$/, '')
+    return (devMode && base === configured ? config.llmProxyPath : base) + '/chat/completions'
+}
 
 /** Строит минимальный контекст parser для действующего участника. */
 export function buildContext(state: GameState): ParseContext {

@@ -2,6 +2,7 @@ export const config = {
     host: 'localhost',
     port: 5174,
     apiBaseUrl: 'https://ai.hexteam.tech/v1',
+    llmProxyPath: '/llm-api',
     model: 'Qwen3.8-27B-Abliterated',
     requestTimeoutMs: 30_000,
     cellFeet: 5,

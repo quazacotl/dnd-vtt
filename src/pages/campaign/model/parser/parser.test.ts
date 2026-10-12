@@ -69,7 +69,10 @@ describe('Parser', () => {
     })
     it('проверяет внешний ответ и отправляет точную модель', async () => {
         let payload: unknown
-        const fetcher = vi.fn<typeof fetch>(async (_, options) => {
+        let endpoint = ''
+        const fetcher = vi.fn<typeof fetch>(async (url, options) => {
+            if (typeof url !== 'string') throw Error('Нужен строковый endpoint')
+            endpoint = url
             if (typeof options?.body !== 'string') throw Error('Нужен JSON body')
             payload = JSON.parse(options.body)
             return new Response(
@@ -94,6 +97,7 @@ describe('Parser', () => {
                 .kind,
         ).toBe('intent')
         expect(payload).toMatchObject({model: 'Qwen3.8-27B-Abliterated'})
+        expect(endpoint).toBe('/llm-api/chat/completions')
     })
     it.each([
         {kind: 'intent', actorId: 'hero', targetId: 'missing', weaponId: 'sword'},

@@ -53,7 +53,11 @@ export function ConnectionSettings({settings, apiKey, onSave, onClose, error}: P
         <section className="settings-panel" aria-label="Настройки подключения">
             <div>
                 <h2>Подключение модели</h2>
-                <p>Запрос идёт напрямую из браузера. Правила рассчитываются локально.</p>
+                <p>
+                    {import.meta.env.DEV
+                        ? 'Подключение к настроенному Qwen идёт через локальный Vite proxy. Правила рассчитываются локально.'
+                        : 'Запрос идёт напрямую из браузера. Правила рассчитываются локально.'}
+                </p>
             </div>
             <form onSubmit={submit}>
                 <label htmlFor="parser-mode">
