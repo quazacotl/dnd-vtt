@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useLayoutEffect, useState} from 'react'
 
 import type {CampaignController} from '../model/campaignStore'
 import {loadSettings, saveSettings} from '../model/parser/connectionSettings'
@@ -10,12 +10,16 @@ import type {ConnectionSettings} from '../model/parser/types'
 export function useConnectionSettings(controller: CampaignController) {
     const [connection, setConnection] = useState(loadSettings)
     const [error, setError] = useState<string | null>(null)
+    useLayoutEffect(() => {
+        controller.setParser(
+            connection.settings.parserMode === 'llm'
+                ? createLlmParser(connection.settings, connection.apiKey)
+                : localParser,
+        )
+    }, [controller, connection])
     const apply = (settings: ConnectionSettings, apiKey: string) => {
         try {
             saveSettings(settings, apiKey)
-            controller.setParser(
-                settings.parserMode === 'llm' ? createLlmParser(settings, apiKey) : localParser,
-            )
             setConnection({settings, apiKey})
             setError(null)
             return true
